@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles/styles.css">
+    <title>Scraping Page</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Scraping Page</h1>
+        <p id="status"></p>
+        <form>
+            <div class="form-group">
+                <label for="url">URL</label>
+                <input name="url" id="url" type="text" required>
+            </div>
+            <div class="form-group">
+                <label for="start-page">Start Page</label>
+                <input name="start-page" id="start-page" type="number" required>
+            </div>
+            <div class="form-group">
+                <label for="total-page">End Page</label>
+                <input name="total-page" id="total-page" type="number" required>
+            </div>
+            <button id="scrapeButton">Start Scraping</button>
+        </form>
+        <div class="progressContainer"><div class="loading"></div><div id="progress"></div></div>
+        
+
+        <div class="download-links" >
+            <a id="downloadAffiliate" href="/affiliateDoctors.xlsx" download>Download Affiliate Doctors Excel</a>
+            <a id="downloadNonAffiliate" href="/nonAffiliateDoctors.xlsx" download>Download Non-Affiliate Doctors Excel</a>
+        </div>
+    </div>
+    <script src="/scraper.js"></script>
+    <script>
+        document.getElementById('scrapeButton').addEventListener('click', async () => {
+            event.preventDefault();
+            document.querySelector('.loading').style.animation = 'loading 1s linear infinite alternate';
+            try {
+                const datas = {
+                    pageUrl: document.getElementById('url').value.trim(),
+                    startPage: document.getElementById('start-page').value,
+                    totalPages: document.getElementById('total-page').value
+                };
+                if (!datas.pageUrl || !datas.startPage || !datas.totalPages || datas.totalPages < 0 || datas.startPage < 0) {
+                    // Mostra un messaggio di errore o fai qualcosa se l'URL è vuoto
+                    alert('Compila tutti i campi!!!');
+                }else{
+
+                
+                console.log('Scraping started');
+                const response = await fetch('/start-scraping', {
+                    method: 'POST',
+                    headers: {
+                    'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(datas)
+                });
+                
+            const { affiliateFileCreated, nonAffiliateFileCreated } = await response.json();
+
+if (affiliateFileCreated) {
+    document.getElementById('downloadAffiliate').style.display = 'block';
+}
+if (nonAffiliateFileCreated) {
+    document.getElementById('downloadNonAffiliate').style.display = 'block';
+}
+            }
+            } catch (error) {
+                console.error('An error occurred while scraping:', error);
+                document.getElementById('status').textContent = 'Error during scraping.';
+            }
+
+        });
+    
+        const progressElement = document.getElementById('progress');
+
+        const eventSource = new EventSource('/progress-stream');
+
+        eventSource.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            const progress = data.progress;
+            // alert(progress);
+            progressElement.style.width = progress + '%';
+            if(progress == 100){
+                document.querySelector('.loading').style.display = 'none';
+            }
+        };
+    </script>
+</body>
+</html>
